@@ -1,0 +1,191 @@
+name: transmissionbt-tak
+title: transmissionbt-tak
+summary: UnOfficial release of Transmission bittorrent for Server with WebUI only
+description: |
+  **Transmission is a Fast, Easy and Free Bittorrent Client.**
+
+  * This is the server version with webUI only ; for desktop version with graphic UI see https://snapcraft.io/transmissionbt-desktop-tak
+  * The web interface is accessible by default at http://localhost:9091
+  * See https://transmissionbt.com for more details.
+
+  **Transmission BT Release**
+  * Utils (transmission-create, -edit, -show) are accessible directly
+  * Service is restarted on any condition.
+
+  **Post install commands required to access media folders and see resources :**
+
+  sudo snap connect transmissionbt-tak:removable-media
+  
+  sudo snap connect transmissionbt-tak:mount-observe
+
+  **No password required by default ; logs accessible through:**
+  
+  sudo snap logs transmissionbt-tak
+  
+  **!!! Files can only be written in a directory owned by 'root' !!!**
+  **!!! Home base directory content is not readable !!!**
+  
+  This is due to current behavior and restrictions of snaps by Canonical.\
+  Check documentation if you want to setup data in /home directory: https://github.com/TehAppKiller/Snapcraft-common-doc/blob/main/README.md#FAQ
+website: https://transmissionbt.com
+source-code: https://github.com/TehAppKiller/transmissionbt-tak
+issues: https://github.com/TehAppKiller/transmissionbt-tak/issues
+contact: ['mailto:tehappkiller@proton.me', 'https://mastodon.social/@TehAppKiller']
+donation: https://whydonate.com/en/fundraising/help-teh-devz
+license: MIT
+icon: icon.svg
+grade: stable
+confinement: strict
+base: core26
+adopt-info: transmissionbt
+platforms:
+  amd64:
+  arm64:
+  armhf:
+  ppc64el:
+  s390x:
+  riscv64:
+
+apps:
+  transmissionbt:
+    command: bin/run-transmissionbt.sh
+    daemon: simple
+    restart-condition: always
+    plugs:
+      - mount-observe
+      - network
+      - network-bind
+      - removable-media
+      - home # useless for now ; if snaps are allowed to read /home folder one day...
+    environment:
+      TRANSMISSION_WEB_HOME: $SNAP/usr/share/transmission/public_html/
+    
+  # Allow utils app to be called
+  transmission-create:
+    command: usr/bin/transmission-create
+    plugs:
+      - mount-observe
+      - network
+      - network-bind
+      - removable-media
+      - home # avaibility depends on caller (root (sudo) or user)
+      
+  transmission-edit:
+    command: usr/bin/transmission-edit
+    plugs:
+      - mount-observe
+      - network
+      - network-bind
+      - removable-media
+      - home # avaibility depends on caller (root (sudo) or user)
+      
+  transmission-remote:
+    command: usr/bin/transmission-remote
+    plugs:
+      - mount-observe
+      - network
+      - network-bind
+      - removable-media
+      - home # avaibility depends on caller (root (sudo) or user)
+      
+  transmission-show:
+    command: usr/bin/transmission-show
+    plugs:
+      - mount-observe
+      - network
+      - network-bind
+      - removable-media
+      - home # avaibility depends on caller (root (sudo) or user)
+
+parts:
+  transmissionbt:
+    override-pull: |
+      craftctl default
+
+      # Get Last Source Tag version and Check Snap (with same Source) version
+      src_version=$(git ls-remote --tags --sort='version:refname' https://github.com/transmission/transmission.git | grep -e 'refs\/tags\/[0-9]*\.[0-9]*\.[0-9]*$' -e 'refs\/tags\/[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*$' | tail -n 1 | sed 's/.*refs\/tags\///');
+      echo "Source last tag: ${src_version}"
+      snap_last_version=$(curl -sL -H "Snap-Device-Series: 16" "https://api.snapcraft.io/v2/snaps/info/transmissionbt-tak?architecture=${CRAFT_ARCH_BUILD_FOR}&fields=version" | sed -nre "s/^.*\"stable\"\,\"track\"\:\"latest\"\}\,\"version\"\:\"([^\"]*)\".*/\1/p");
+      echo "Snap last version: ${snap_last_version}"
+      snap_build_with_same_version=$(echo $snap_last_version | sed -nre "s/^($src_version.*).*/\1/p");
+      # Same version ?
+      if [ -z "$snap_build_with_same_version" ]
+      then
+        new_snap_version="${src_version}";
+      else
+        # Get snap build version
+        snap_build=$(echo $snap_build_with_same_version | sed -nre 's/^.*-v([0-9]*).*/\1/p');
+        # Already a build version ?
+        if [ -z "$snap_build" ]
+        then
+          # init @v2
+          new_snap_build="2";
+        else
+          # increment @v+1
+          new_snap_build=$(($snap_build+1));
+        fi
+
+        new_snap_version="${src_version}-v${new_snap_build}";
+      fi
+
+      craftctl set version=$new_snap_version
+
+      # Pull
+      rm -rf $CRAFT_PART_SRC/{,.[!.],..?}*
+      git clone -b ${src_version} --depth=1 --recursive https://github.com/transmission/transmission.git .
+    source: .
+    plugin: cmake
+    cmake-generator: Ninja
+    cmake-parameters:
+      - -DCMAKE_INSTALL_PREFIX=/usr
+      - -DCMAKE_BUILD_TYPE=Release 
+      - -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON
+      - -DENABLE_GTK=OFF # No Gnome UI
+      - -DENABLE_QT=OFF # No QT UI
+      - -DUSE_SYSTEM_EVENT2=ON
+      - -DUSE_SYSTEM_DEFLATE=ON
+      - -DUSE_SYSTEM_MINIUPNPC=ON
+      - -DUSE_SYSTEM_NATPMP=ON
+      - -DUSE_SYSTEM_B64=ON
+      - -DUSE_SYSTEM_PSL=ON
+      - -DUSE_SYSTEM_DHT=OFF # Not packaged in Ubuntu
+      - -DUSE_SYSTEM_UTP=OFF # Not packaged in Ubuntu
+      - -DWITH_CRYPTO=openssl
+      - -DWITH_SYSTEMD=OFF # Not needed
+    build-packages:
+      - curl
+      - git
+      - libssl-dev
+      - libcurl4-openssl-dev
+      - libdeflate-dev
+      - libevent-dev
+      - libnatpmp-dev
+      - libminiupnpc-dev
+      - libpsl-dev
+      - libb64-dev
+      #- libsystemd-dev # Option not needed
+    override-prime: |
+      craftctl default
+      chmod +rx $CRAFT_PRIME/bin/run-transmissionbt.sh
+
+  local:
+    plugin: dump
+    source: snap/local
+
+  deps:
+    plugin: nil
+    source: .
+    stage-packages:
+      - libcurl4t64
+      - libldap2
+      - libnghttp2-14
+      - libpsl5t64
+      - librtmp1
+      - libsasl2-2
+      - libssh2-1t64
+      - libb64-0d
+      - libdeflate0
+      - libevent-2.1-7t64
+      - libminiupnpc21
+      - libnatpmp1t64
+      
