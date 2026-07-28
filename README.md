@@ -4,7 +4,7 @@
 ![snap size](https://badgen.net/snapcraft/size/transmissionbt-tak/amd64/stable)
 
 ## Snap Description
-UnOfficial release of Transission bittorrent for Server with WebUI only (qBittorrent-nox)\
+UnOfficial release of Transission bittorrent for Server with WebUI only\
 https://snapcraft.io/transmissionbt-tak
 
 (For Desktop edition see [transmissionbt-desktop-tak](https://github.com/TehAppKiller/transmissionbt-desktop-tak))
