@@ -59,6 +59,12 @@ apps:
       - home # useless for now ; if snaps are allowed to read /home folder one day...
     environment:
       TRANSMISSION_WEB_HOME: $SNAP/usr/share/transmission/public_html/
+      
+  # Snap store "Launch" button Open webservice url in default browser
+  transmissionbt-tak:
+    command: bin/launch-browser.sh
+    plugs:
+      - desktop
     
   # Allow utils app to be called
   transmission-create:
@@ -167,6 +173,7 @@ parts:
     override-prime: |
       craftctl default
       chmod +rx $CRAFT_PRIME/bin/run-transmissionbt.sh
+      chmod +rx $CRAFT_PRIME/bin/launch-browser.sh
 
   local:
     plugin: dump

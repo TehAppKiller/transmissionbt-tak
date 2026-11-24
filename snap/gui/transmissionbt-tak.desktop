@@ -1,0 +1,6 @@
+[Desktop Entry]
+Name=TransmissionBT-tak
+Comment=Open webUI
+Type=Application
+Exec=transmissionbt-tak
+Icon=${SNAP}/meta/gui/icon.svg
