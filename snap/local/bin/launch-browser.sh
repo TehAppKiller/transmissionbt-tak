@@ -1,15 +1,16 @@
 #!/bin/bash -e
 
-# Define config file
-config_file="$HOME/.config/transmission-daemon/settings.json"
+# Cannot access config file (in root folders)
+# Use file in $SNAP_COMMON as a trick
 
-# Check if config file exists
-if [ ! -f $config_file ]; then
-    echo "! Configuration file does not exist !"
+# Define shared file
+shared_file="$SNAP_COMMON/webui-port"
+
+# Check if shared file exists
+if [ ! -f $shared_file ]; then
+    echo "! Shared file does not exist !"
 else
-    # Recover used port
-	"rpc-port": 9091,
-	port=$(sed -nr 's/.*"rpc-port":[[:space:]]([0-9]+),.*/\1/p' "$config_file")
+    port=$(cat $shared_file)
 	# Launch url
 	xdg-open http://localhost:$port
 fi
